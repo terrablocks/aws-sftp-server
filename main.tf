@@ -45,7 +45,7 @@ POLICY
 
 resource "aws_iam_role" "sftp_auth_role" {
   count = var.auth_type == "API_GATEWAY" ? 1 : 0
-  name = "sftp-server-auth-role-${random_id.id.hex}"
+  name  = "sftp-server-auth-role-${random_id.id.hex}"
 
   assume_role_policy = <<EOF
 {
@@ -65,8 +65,8 @@ EOF
 
 resource "aws_iam_role_policy" "sftp_auth_role_policy" {
   count = var.auth_type == "API_GATEWAY" ? 1 : 0
-  name = "sftp-server-auth-role-policy-${random_id.id.hex}"
-  role = aws_iam_role.sftp_auth_role.0.id
+  name  = "sftp-server-auth-role-policy-${random_id.id.hex}"
+  role  = aws_iam_role.sftp_auth_role.0.id
 
   policy = <<POLICY
 {
@@ -87,9 +87,9 @@ POLICY
 }
 
 resource "aws_transfer_server" "pub_sftp" {
-  count = var.sftp_type == "private" ? 0 : 1
+  count         = var.sftp_type == "private" ? 0 : 1
   endpoint_type = "PUBLIC"
-  
+
   identity_provider_type = var.auth_type
   invocation_role        = var.auth_type == "API_GATEWAY" ? aws_iam_role.sftp_auth_role.0.arn : null
   url                    = var.auth_type == "API_GATEWAY" ? var.api_url : null
@@ -105,7 +105,7 @@ resource "aws_transfer_server" "pub_sftp" {
 }
 
 resource "aws_transfer_server" "pvt_sftp" {
-  count = var.sftp_type == "private" ? 1 : 0
+  count         = var.sftp_type == "private" ? 1 : 0
   endpoint_type = "VPC_ENDPOINT"
   endpoint_details {
     vpc_endpoint_id = var.vpc_endpoint_id
