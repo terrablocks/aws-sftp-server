@@ -18,11 +18,11 @@ variable "sftp_domain" {
   default = "sftp"
 }
 variable "sftp_users" {
-  type = list
+  type = list(any)
 }
 variable "sftp_user_home_dir" {
-  type = list
+  type = list(any)
 }
 variable "sftp_user_ssh_key" {
-  type = list
+  type = list(any)
 }
