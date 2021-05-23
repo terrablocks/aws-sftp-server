@@ -1,9 +1,5 @@
-resource "random_id" "id" {
-  byte_length = 8
-}
-
-resource "aws_iam_role" "sftp_role" {
-  name = "sftp-server-role-${random_id.id.hex}"
+resource "aws_iam_role" "sftp_logging" {
+  name = "${var.name}-transfer-logging"
 
   assume_role_policy = <<EOF
 {
@@ -21,9 +17,53 @@ resource "aws_iam_role" "sftp_role" {
 EOF
 }
 
-resource "aws_iam_role_policy" "sftp_role_policy" {
-  name = "sftp-server-role-policy-${random_id.id.hex}"
-  role = aws_iam_role.sftp_role.id
+resource "aws_iam_role_policy" "sftp_logging" {
+  name = "${var.name}-transfer-logging"
+  role = aws_iam_role.sftp_logging.id
+
+  policy = <<POLICY
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Action": [
+          "logs:CreateLogStream",
+          "logs:DescribeLogStreams",
+          "logs:CreateLogGroup",
+          "logs:PutLogEvents"
+        ],
+        "Resource": "*"
+        }
+    ]
+}
+POLICY
+}
+
+resource "aws_iam_role" "sftp_auth" {
+  count = var.auth_type == "API_GATEWAY" ? 1 : 0
+  name  = "${var.name}-api-gateway-auth"
+
+  assume_role_policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Principal": {
+            "Service": "transfer.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "sftp_auth" {
+  count = var.auth_type == "API_GATEWAY" ? 1 : 0
+  name  = "${var.name}-api-gateway-auth-role-policy"
+  role  = join(",", aws_iam_role.sftp_auth.*.id)
 
   policy = <<POLICY
 {
@@ -43,108 +83,64 @@ resource "aws_iam_role_policy" "sftp_role_policy" {
 POLICY
 }
 
-resource "aws_iam_role" "sftp_auth_role" {
-  count = var.auth_type == "API_GATEWAY" ? 1 : 0
-  name  = "sftp-server-auth-role-${random_id.id.hex}"
-
-  assume_role_policy = <<EOF
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-        "Effect": "Allow",
-        "Principal": {
-            "Service": "transfer.amazonaws.com"
-        },
-        "Action": "sts:AssumeRole"
-        }
-    ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy" "sftp_auth_role_policy" {
-  count = var.auth_type == "API_GATEWAY" ? 1 : 0
-  name  = "sftp-server-auth-role-policy-${random_id.id.hex}"
-  role  = aws_iam_role.sftp_auth_role.0.id
-
-  policy = <<POLICY
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-        "Effect": "Allow",
-        "Action": [
-            "logs:CreateLogGroup",
-            "logs:CreateLogStream",
-            "logs:PutLogEvents"
-        ],
-        "Resource": "*"
-        }
-    ]
-}
-POLICY
-}
-
-resource "aws_transfer_server" "pub_sftp" {
+resource "aws_transfer_server" "public" {
   count         = var.sftp_type == "private" ? 0 : 1
   endpoint_type = "PUBLIC"
 
   identity_provider_type = var.auth_type
-  invocation_role        = var.auth_type == "API_GATEWAY" ? aws_iam_role.sftp_auth_role.0.arn : null
+  invocation_role        = var.auth_type == "API_GATEWAY" ? join(",", aws_iam_role.sftp_auth.*.arn) : null
   url                    = var.auth_type == "API_GATEWAY" ? var.api_url : null
 
-  logging_role = aws_iam_role.sftp_role.arn
+  logging_role = aws_iam_role.sftp_logging.arn
 
   force_destroy = true
 
-  tags = {
-    Name = var.sftp_server_name
-    Tier = "public"
-  }
+  tags = merge({
+    Name = var.name
+  }, var.tags)
 }
 
-resource "aws_transfer_server" "pvt_sftp" {
+resource "aws_transfer_server" "private" {
   count         = var.sftp_type == "private" ? 1 : 0
   endpoint_type = "VPC_ENDPOINT"
+
   endpoint_details {
     vpc_endpoint_id = var.vpc_endpoint_id
   }
 
   identity_provider_type = var.auth_type
-  invocation_role        = var.auth_type == "API_GATEWAY" ? aws_iam_role.sftp_auth_role.0.arn : null
+  invocation_role        = var.auth_type == "API_GATEWAY" ? join(",", aws_iam_role.sftp_auth.*.arn) : null
   url                    = var.auth_type == "API_GATEWAY" ? var.api_url : null
 
-  logging_role = aws_iam_role.sftp_role.arn
+  logging_role = aws_iam_role.sftp_logging.arn
 
   force_destroy = true
 
-  tags = {
-    Name = var.sftp_server_name
-    Tier = "private"
-  }
+  tags = merge({
+    Name = var.name
+  }, var.tags)
 }
 
 locals {
-  sftp_server_id = var.sftp_type == "private" ? aws_transfer_server.pvt_sftp.0.id : aws_transfer_server.pub_sftp.0.id
-  sftp_server_ep = var.sftp_type == "private" ? aws_transfer_server.pvt_sftp.0.endpoint : aws_transfer_server.pub_sftp.0.endpoint
+  sftp_server_id = var.sftp_type == "private" ? join(",", aws_transfer_server.private.*.id) : join(",", aws_transfer_server.public.*.id)
+  sftp_server_ep = var.sftp_type == "private" ? join(",", aws_transfer_server.private.*.endpoint) : join(",", aws_transfer_server.public.*.endpoint)
 }
 
-data "aws_route53_zone" "hosted_zone" {
+data "aws_route53_zone" "primary" {
   name = var.root_hosted_zone
 }
 
 resource "aws_route53_record" "sftp_record" {
-  zone_id = data.aws_route53_zone.hosted_zone.zone_id
+  zone_id = data.aws_route53_zone.primary.zone_id
   name    = "${var.sftp_domain}.${var.root_hosted_zone}"
   type    = "CNAME"
-  ttl     = "300"
+  ttl     = "60"
   records = [local.sftp_server_ep]
 }
 
-resource "aws_iam_role" "sftp_user_role" {
-  count              = length(var.sftp_users)
-  name               = "sftp-user-iam-role-${var.sftp_users[count.index]}"
+resource "aws_iam_role" "sftp_user" {
+  for_each           = var.sftp_users
+  name               = "${var.name}-sftp-user-${each.key}"
   assume_role_policy = <<EOF
 {
     "Version": "2012-10-17",
@@ -161,10 +157,10 @@ resource "aws_iam_role" "sftp_user_role" {
 EOF
 }
 
-resource "aws_iam_role_policy" "sftp_user_policy" {
-  count = length(var.sftp_users)
-  name  = "sftp-user-iam-role-policy-${var.sftp_users[count.index]}"
-  role  = aws_iam_role.sftp_user_role[count.index].id
+resource "aws_iam_role_policy" "sftp_user" {
+  for_each = var.sftp_users
+  name     = "${var.name}-sftp-user-${each.key}"
+  role     = aws_iam_role.sftp_user[each.key].id
 
   policy = <<POLICY
 {
@@ -178,7 +174,7 @@ resource "aws_iam_role_policy" "sftp_user_policy" {
             ],
             "Effect": "Allow",
             "Resource": [
-                "arn:aws:s3:::${join("", slice(split("/", var.sftp_user_home_dir[count.index]), 0, 1))}"
+                "arn:aws:s3:::${join("", slice(split("/", each.value), 0, 1))}"
             ]
         },
         {
@@ -191,24 +187,25 @@ resource "aws_iam_role_policy" "sftp_user_policy" {
                 "s3:DeleteObject",
                 "s3:GetObjectVersion"
             ],
-            "Resource": "arn:aws:s3:::${trimsuffix(var.sftp_user_home_dir[count.index], "/")}/*"
+            "Resource": "arn:aws:s3:::${trimsuffix(each.value, "/")}/*"
         }
     ]
 }
 POLICY
 }
 
-resource "aws_transfer_user" "sftp_user" {
-  count          = length(var.sftp_users)
+resource "aws_transfer_user" "sftp" {
+  for_each       = var.sftp_users
   server_id      = local.sftp_server_id
-  user_name      = var.sftp_users[count.index]
-  home_directory = "/${var.sftp_user_home_dir[count.index]}"
-  role           = aws_iam_role.sftp_user_role[count.index].arn
+  user_name      = each.key
+  home_directory = "/${each.value}"
+  role           = aws_iam_role.sftp_user[count.index].arn
+  tags           = merge({ User = each.key }, var.tags)
 }
 
-resource "aws_transfer_ssh_key" "foo" {
-  count     = length(var.sftp_users)
+resource "aws_transfer_ssh_key" "sftp" {
+  for_each  = var.sftp_users
   server_id = local.sftp_server_id
-  user_name = aws_transfer_user.sftp_user[count.index].user_name
-  body      = var.sftp_user_ssh_key[count.index]
+  user_name = each.key
+  body      = each.value
 }

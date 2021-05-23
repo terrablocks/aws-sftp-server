@@ -21,7 +21,7 @@ MIT Licence. See [Licence](LICENCE) for full details.
 | Parameter          | Type   | Description                                                                              | Default         | Required |
 |--------------------|--------|------------------------------------------------------------------------------------------|-----------------|----------|
 | sftp_type          | string | Type of SFTP server. Valid values: public or private                                     | public          | N        |
-| sftp_server_name   | string | Name of SFTP server                                                                      | sftp-server     | N        |
+| name   | string | Name of SFTP server                                                                      | sftp-server     | N        |
 | vpc_endpoint_id    | string | Id of VPC Endpoint. Required if you are creating private SFTP server                     | null            | N        |
 | auth_type          | string | Identity provider type for AuthN and AuthZ. Valid values: SERVICE_MANAGED or API_GATEWAY | SERVICE_MANAGED | N        |
 | api_url            | string | URL of API Gateway resource. Required if auth_type is set to API_GATEWAY                 | null            | N        |
