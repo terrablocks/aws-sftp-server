@@ -1,5 +1,5 @@
 # Local .terraform directories
-**/.terraform/*
+.terraform*
 
 # .tfstate files
 *.tfstate
@@ -29,3 +29,5 @@ override.tf.json
 # example: *tfplan*
 
 provider.tf
+header.tf
+*.sh
