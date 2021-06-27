@@ -95,6 +95,7 @@ POLICY
 }
 
 resource "aws_transfer_server" "this" {
+  # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   endpoint_type = var.sftp_type
   protocols     = var.protocols
   certificate   = var.certificate_arn
