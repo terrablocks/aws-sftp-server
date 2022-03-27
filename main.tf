@@ -101,7 +101,7 @@ resource "aws_transfer_server" "this" {
   certificate   = var.certificate_arn
 
   dynamic "endpoint_details" {
-    for_each = length(var.endpoint_details) == 0 ? [] : [var.endpoint_details]
+    for_each = var.endpoint_details == null ? [] : [var.endpoint_details]
     content {
       vpc_id                 = lookup(endpoint_details.value, "vpc_id", null)
       subnet_ids             = lookup(endpoint_details.value, "subnet_ids", null)
