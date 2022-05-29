@@ -94,6 +94,31 @@ resource "aws_iam_role_policy" "auth" {
 POLICY
 }
 
+resource "aws_security_group" "sftp_vpc" {
+  # checkov:skip=CKV2_AWS_5: Associated to SFTP server
+  # checkov:skip=CKV_AWS_24: Port 22 open required to the world
+  count       = var.sftp_type == "VPC" && length(lookup(var.endpoint_details, "security_group_ids", [])) == 0 ? 1 : 0
+  name        = "${local.name}-sftp-vpc"
+  description = "Security group for SFTP VPC"
+  vpc_id      = lookup(var.endpoint_details, "vpc_id", null)
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow connections from everywhere on port 22"
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound connections"
+  }
+}
+
 resource "aws_transfer_server" "this" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   endpoint_type = var.sftp_type
@@ -104,7 +129,9 @@ resource "aws_transfer_server" "this" {
     for_each = length(var.endpoint_details) == 0 ? [] : [var.endpoint_details]
     content {
       vpc_id                 = lookup(endpoint_details.value, "vpc_id", null)
+      vpc_endpoint_id        = lookup(endpoint_details.value, "vpc_endpoint_id", null)
       subnet_ids             = lookup(endpoint_details.value, "subnet_ids", null)
+      security_group_ids     = lookup(endpoint_details.value, "security_group_ids", aws_security_group.sftp_vpc.*.id)
       address_allocation_ids = lookup(endpoint_details.value, "address_allocation_ids", null)
     }
   }
@@ -112,6 +139,8 @@ resource "aws_transfer_server" "this" {
   identity_provider_type = var.identity_provider_type
   url                    = var.api_gw_url
   invocation_role        = var.invocation_role
+  directory_id           = var.directory_id
+  function               = var.function_arn
 
   logging_role         = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
   force_destroy        = var.force_destroy

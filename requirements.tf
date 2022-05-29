@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 0.13"
+  required_version = ">= 0.15"
   required_providers {
     aws = {
       source  = "hashicorp/aws"
@@ -10,4 +10,6 @@ terraform {
       version = ">= 3.1.0"
     }
   }
+
+  experiments = [module_variable_optional_attrs]
 }

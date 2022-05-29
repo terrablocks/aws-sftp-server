@@ -7,7 +7,7 @@ variable "name" {
 variable "sftp_type" {
   type        = string
   default     = "PUBLIC"
-  description = "Type of SFTP server. **Valid values:** PUBLIC or VPC"
+  description = "Type of SFTP server. **Valid values:** PUBLIC, VPC or VPC_ENDPOINT"
 }
 
 variable "protocols" {
@@ -24,17 +24,21 @@ variable "certificate_arn" {
 
 variable "endpoint_details" {
   type = object({
-    vpc_id                 = string
-    subnet_ids             = list(string)
-    address_allocation_ids = list(string)
+    vpc_id                 = optional(string)
+    vpc_endpoint_id        = optional(string)
+    subnet_ids             = optional(list(string))
+    security_group_ids     = optional(list(string))
+    address_allocation_ids = optional(list(string))
   })
   default     = null
   description = <<-EOT
     A block required to setup internal or public facing SFTP server endpoint within a VPC
     ```{
-      vpc_id                 = ID of VPC in which SFTP server endpoint will be hosted
-      subnet_ids             = List of subnets ids within the VPC for hosting SFTP server endpoint
-      address_allocation_ids = List of address allocation IDs to attach an Elastic IP address to your SFTP server endpoint
+      vpc_id                 = (Optional) ID of VPC in which SFTP server endpoint will be hosted. Required if endpoint type is set to VPC
+      vpc_endpoint_id        = (Optional) The ID of VPC endpoint to use for hosting internal SFTP server. Required if endpoint type is set to VPC_ENDPOINT
+      subnet_ids             = (Optional) List of subnets ids within the VPC for hosting SFTP server endpoint. Supported only if endpoint type is set to VPC
+      security_group_ids     = (Optional) List of security groups to attach to the SFTP endpoint. Supported only if endpoint is to type VPC. If left blank for VPC endpoint a security group with port 22 open to the world will be created and attached
+      address_allocation_ids = (Optional) List of address allocation IDs to attach an Elastic IP address to your SFTP server endpoint. Supported only if endpoint type is set to VPC
     }```
   EOT
 }
@@ -42,7 +46,7 @@ variable "endpoint_details" {
 variable "identity_provider_type" {
   type        = string
   default     = "SERVICE_MANAGED"
-  description = "Mode of authentication to use for accessing the service. **Valid Values:** SERVICE_MANAGED or API_GATEWAY"
+  description = "Mode of authentication to use for accessing the service. **Valid Values:** `SERVICE_MANAGED`, `API_GATEWAY`, `AWS_DIRECTORY_SERVICE` or `AWS_LAMBDA`"
 }
 
 variable "api_gw_url" {
@@ -57,22 +61,34 @@ variable "invocation_role" {
   description = "ARN of the IAM role to authenticate the user when `identity_provider_type` is set to `API_GATEWAY`"
 }
 
+variable "directory_id" {
+  type        = string
+  default     = null
+  description = "ID of the directory service to authenticate users when `identity_provider_type` is of type `AWS_DIRECTORY_SERVICE`"
+}
+
+variable "function_arn" {
+  type        = string
+  default     = null
+  description = "ARN of the lambda function to authenticate users when `identity_provider_type` is of type `AWS_LAMBDA`"
+}
+
 variable "logging_role" {
   type        = string
   default     = null
-  description = "ARN of an IAM role to allow to write your SFTP users’ activity to Amazon CloudWatch logs"
+  description = "ARN of an IAM role to allow to write SFTP users activity to Amazon CloudWatch logs"
 }
 
 variable "force_destroy" {
   type        = bool
   default     = true
-  description = "Whether to delete all the users associated with server so that server can be deleted successfully"
+  description = "Whether to delete all the users associated with server so that server can be deleted successfully. **Note:** Supported only if `identity_provider_type` is set to `SERVICE_MANAGED`"
 }
 
 variable "security_policy_name" {
   type        = string
-  default     = "TransferSecurityPolicy-2018-11"
-  description = "Specifies the name of the [security policy](https://docs.aws.amazon.com/transfer/latest/userguide/security-policies.html) to associate with the server. **Possible values:** TransferSecurityPolicy-2018-11, TransferSecurityPolicy-2020-06 or TransferSecurityPolicy-FIPS-2020-06"
+  default     = "TransferSecurityPolicy-2020-06"
+  description = "Specifies the name of the [security policy](https://docs.aws.amazon.com/transfer/latest/userguide/security-policies.html) to associate with the server"
 }
 
 variable "host_key" {
