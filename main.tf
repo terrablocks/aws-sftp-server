@@ -237,8 +237,9 @@ resource "aws_transfer_user" "this" {
 }
 
 resource "aws_transfer_ssh_key" "this" {
-  for_each  = var.sftp_users_ssh_key
-  server_id = local.server_id
-  user_name = each.key
-  body      = each.value
+  for_each   = var.sftp_users_ssh_key
+  server_id  = local.server_id
+  user_name  = each.key
+  body       = each.value
+  depends_on = [aws_transfer_user.this]
 }
