@@ -1,0 +1,67 @@
+name: 🐞 Bug
+description: Something isn't working as expected 💔
+title: "[Bug] <title>"
+labels: ["bug"]
+assignees:
+  - paliwalvimal
+body:
+- type: checkboxes
+  attributes:
+    label: Prerequisites
+    description: Please answer the following questions for yourself before submitting an issue
+    options:
+    - label: I am running the latest version
+      required: true
+    - label: I read the documentation properly and found no answer
+      required: true
+    - label: I have checked to make sure that this issue has not already been filed
+      required: true
+- type: textarea
+  attributes:
+    label: Expected Behavior
+    description: A concise description of what you expected to happen
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Current Behavior
+    description: A concise description of what you're experiencing
+  validations:
+    required: true
+- type: textarea
+  attributes:
+    label: Steps To Reproduce
+    description: Steps to reproduce the behavior
+    placeholder: |
+      1. In this environment...
+      2. With this config...
+      3. Run '...'
+      4. See error...
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Environment
+    description: |
+      Example:
+        - **Operating System**: Ubuntu 20.04
+        - **Terraform Version**: 1.4.0
+        - **Provider version**: v2.16.0 (AWS Provider Version)
+        - **Module Version**: v1.0.0
+    value: |
+        - Operating System:
+        - Terraform Version:
+        - Provider version:
+        - Module Version:
+    render: markdown
+  validations:
+    required: false
+- type: textarea
+  attributes:
+    label: Anything else?
+    description: |
+      Links? References? Anything that will give us more context about the issue you are encountering
+
+      Tip: You can attach images or log files by clicking this area to highlight it and then dragging files in
+  validations:
+    required: false
