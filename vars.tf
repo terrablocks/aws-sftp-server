@@ -7,7 +7,7 @@ variable "name" {
 variable "sftp_type" {
   type        = string
   default     = "PUBLIC"
-  description = "Type of SFTP server. **Valid values:** PUBLIC, VPC or VPC_ENDPOINT"
+  description = "Type of SFTP server. **Valid values:** `PUBLIC`, `VPC` or `VPC_ENDPOINT`"
 }
 
 variable "protocols" {
@@ -30,15 +30,15 @@ variable "endpoint_details" {
     security_group_ids     = optional(list(string))
     address_allocation_ids = optional(list(string))
   })
-  default     = null
+  default     = {}
   description = <<-EOT
-    A block required to setup internal or public facing SFTP server endpoint within a VPC
+    A block required to setup SFTP server if type is set to `VPC` or `VPC_ENDPOINT`
     ```{
       vpc_id                 = (Optional) ID of VPC in which SFTP server endpoint will be hosted. Required if endpoint type is set to VPC
       vpc_endpoint_id        = (Optional) The ID of VPC endpoint to use for hosting internal SFTP server. Required if endpoint type is set to VPC_ENDPOINT
-      subnet_ids             = (Optional) List of subnets ids within the VPC for hosting SFTP server endpoint. Supported only if endpoint type is set to VPC
-      security_group_ids     = (Optional) List of security groups to attach to the SFTP endpoint. Supported only if endpoint is to type VPC. If left blank for VPC endpoint a security group with port 22 open to the world will be created and attached
-      address_allocation_ids = (Optional) List of address allocation IDs to attach an Elastic IP address to your SFTP server endpoint. Supported only if endpoint type is set to VPC
+      subnet_ids             = (Optional) List of subnets ids within the VPC for hosting SFTP server endpoint. Required if endpoint type is set to VPC
+      security_group_ids     = (Optional) List of security groups to attach to the SFTP endpoint. Supported only if endpoint is to type VPC. If left blank for VPC, a security group with port 22 open to the world will be created and attached
+      address_allocation_ids = (Optional) List of address allocation IDs to attach an Elastic IP address to your SFTP server endpoint. Supported only if endpoint type is set to VPC. If left blank for VPC, an EIP will be automatically created per subnet and attached
     }```
   EOT
 }
@@ -106,7 +106,7 @@ variable "hosted_zone" {
 variable "sftp_sub_domain" {
   type        = string
   default     = "sftp"
-  description = "DNS name for SFTP server. **NOTE: Only sub-domain required. DO NOT provide entire URL**"
+  description = "DNS name for SFTP server. **NOTE: Only sub-domain name required. DO NOT provide entire URL**"
 }
 
 variable "sftp_users" {

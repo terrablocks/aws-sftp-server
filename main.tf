@@ -94,13 +94,34 @@ resource "aws_iam_role_policy" "auth" {
 POLICY
 }
 
+resource "aws_transfer_server" "public" {
+  # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
+  count                  = var.sftp_type == "PUBLIC" ? 1 : 0
+  endpoint_type          = var.sftp_type
+  protocols              = var.protocols
+  certificate            = var.certificate_arn
+  identity_provider_type = var.identity_provider_type
+  url                    = var.api_gw_url
+  invocation_role        = var.invocation_role
+  directory_id           = var.directory_id
+  function               = var.function_arn
+  logging_role           = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
+  force_destroy          = var.force_destroy
+  security_policy_name   = var.security_policy_name
+  host_key               = var.host_key
+
+  tags = merge({
+    Name = local.name
+  }, var.tags)
+}
+
 resource "aws_security_group" "sftp_vpc" {
   # checkov:skip=CKV2_AWS_5: Associated to SFTP server
   # checkov:skip=CKV_AWS_24: Port 22 open required to the world
-  count       = var.sftp_type == "VPC" && length(lookup(var.endpoint_details, "security_group_ids", [])) == 0 ? 1 : 0
+  count       = var.sftp_type == "VPC" && lookup(var.endpoint_details, "security_group_ids", null) == null ? 1 : 0
   name        = "${local.name}-sftp-vpc"
   description = "Security group for SFTP VPC"
-  vpc_id      = lookup(var.endpoint_details, "vpc_id", null)
+  vpc_id      = lookup(var.endpoint_details, "vpc_id")
 
   ingress {
     from_port   = 22
@@ -119,21 +140,25 @@ resource "aws_security_group" "sftp_vpc" {
   }
 }
 
-resource "aws_transfer_server" "this" {
+resource "aws_eip" "sftp_vpc" {
+  count = var.sftp_type == "VPC" && lookup(var.endpoint_details, "address_allocation_ids", null) == null ? length(lookup(var.endpoint_details, "subnet_ids")) : 0
+  vpc   = true
+  tags  = var.tags
+}
+
+resource "aws_transfer_server" "vpc" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
+  count         = var.sftp_type != "PUBLIC" ? 1 : 0
   endpoint_type = var.sftp_type
   protocols     = var.protocols
   certificate   = var.certificate_arn
 
-  dynamic "endpoint_details" {
-    for_each = var.endpoint_details == null ? [] : [var.endpoint_details]
-    content {
-      vpc_id                 = lookup(endpoint_details.value, "vpc_id", null)
-      vpc_endpoint_id        = lookup(endpoint_details.value, "vpc_endpoint_id", null)
-      subnet_ids             = lookup(endpoint_details.value, "subnet_ids", null)
-      security_group_ids     = lookup(endpoint_details.value, "security_group_ids", aws_security_group.sftp_vpc.*.id)
-      address_allocation_ids = lookup(endpoint_details.value, "address_allocation_ids", null)
-    }
+  endpoint_details {
+    vpc_id                 = lookup(var.endpoint_details, "vpc_id", null)
+    vpc_endpoint_id        = lookup(var.endpoint_details, "vpc_endpoint_id", null)
+    subnet_ids             = lookup(var.endpoint_details, "subnet_ids", null)
+    security_group_ids     = lookup(var.endpoint_details, "security_group_ids", aws_security_group.sftp_vpc.*.id)
+    address_allocation_ids = lookup(var.endpoint_details, "address_allocation_ids", aws_eip.sftp_vpc.*.allocation_id)
   }
 
   identity_provider_type = var.identity_provider_type
@@ -153,8 +178,8 @@ resource "aws_transfer_server" "this" {
 }
 
 locals {
-  server_id = aws_transfer_server.this.id
-  server_ep = aws_transfer_server.this.endpoint
+  server_id = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public.*.id) : join(",", aws_transfer_server.vpc.*.id)
+  server_ep = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public.*.endpoint) : join(",", aws_transfer_server.vpc.*.endpoint)
 }
 
 data "aws_route53_zone" "primary" {
