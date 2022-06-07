@@ -113,7 +113,7 @@ variable "sftp_users" {
   type        = map(string)
   default     = {}
   description = <<-EOT
-    Map of users with key as username and value as their home directory
+    Map of users with key as username and value as their home directory. Home directory is the S3 bucket path which user should have access to
     ```{
       user = home_dir_path
     }```
