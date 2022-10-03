@@ -25,8 +25,8 @@ module "sftp" {
 
 | Name | Version |
 |------|---------|
-| terraform | >= 0.15 |
-| aws | >= 3.37.0 |
+| terraform | >= 1.3.0 |
+| aws | >= 4.0.0 |
 | random | >= 3.1.0 |
 
 ## Inputs
@@ -49,7 +49,7 @@ module "sftp" {
 | host_key | RSA private key that will be used to identify your server when clients connect to it over SFTP | `string` | `null` | no |
 | hosted_zone | Hosted zone name to create DNS entry for SFTP server | `string` | `null` | no |
 | sftp_sub_domain | DNS name for SFTP server. **NOTE: Only sub-domain name required. DO NOT provide entire URL** | `string` | `"sftp"` | no |
-| sftp_users | Map of users with key as username and value as their home directory<pre>{<br>  user = home_dir_path<br>}</pre> | `map(string)` | `{}` | no |
+| sftp_users | Map of users with key as username and value as their home directory. Home directory is the S3 bucket path which user should have access to<pre>{<br>  user = home_dir_path<br>}</pre> | `map(string)` | `{}` | no |
 | sftp_users_ssh_key | Map of users with key as username and value as their public SSH key<pre>{<br>  user = ssh_public_key_content<br>}</pre> | `map(string)` | `{}` | no |
 | tags | A map of key value pair to assign to resources | `map(string)` | `{}` | no |
 
