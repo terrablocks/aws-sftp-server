@@ -44,7 +44,7 @@ resource "aws_iam_role_policy" "logging" {
         "logs:CreateLogGroup",
         "logs:PutLogEvents"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:logs:*:*:log-group:/aws/transfer/*"
     }
   ]
 }
