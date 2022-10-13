@@ -266,6 +266,12 @@ resource "aws_iam_role_policy" "user" {
 POLICY
 }
 
+resource "null_resource" "restricted_home" {
+  triggers = {
+    key = var.restricted_home
+  }
+}
+
 resource "aws_transfer_user" "this" {
   for_each  = var.sftp_users
   server_id = local.server_id
@@ -290,6 +296,12 @@ resource "aws_transfer_user" "this" {
 
   role = aws_iam_role.user[each.key].arn
   tags = merge({ User = each.key }, var.tags)
+
+  lifecycle {
+    replace_triggered_by = [
+      null_resource.restricted_home
+    ]
+  }
 }
 
 resource "aws_transfer_ssh_key" "this" {
@@ -298,4 +310,10 @@ resource "aws_transfer_ssh_key" "this" {
   user_name  = each.key
   body       = each.value
   depends_on = [aws_transfer_user.this]
+
+  lifecycle {
+    replace_triggered_by = [
+      aws_transfer_user.this
+    ]
+  }
 }
