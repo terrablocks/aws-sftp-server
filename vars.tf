@@ -136,3 +136,9 @@ variable "tags" {
   default     = {}
   description = "A map of key value pair to assign to resources"
 }
+
+variable "restricted_home" {
+  type        = bool
+  description = "Restricts SFTP users so they can't access anything outside of their home directories"
+  default     = false
+}

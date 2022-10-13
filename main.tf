@@ -267,12 +267,29 @@ POLICY
 }
 
 resource "aws_transfer_user" "this" {
-  for_each       = var.sftp_users
-  server_id      = local.server_id
-  user_name      = each.key
-  home_directory = "/${each.value}"
-  role           = aws_iam_role.user[each.key].arn
-  tags           = merge({ User = each.key }, var.tags)
+  for_each  = var.sftp_users
+  server_id = local.server_id
+  user_name = each.key
+
+  home_directory_type = var.restricted_home ? "LOGICAL" : null
+  home_directory      = var.restricted_home ? null : "/${each.value}"
+
+  dynamic "home_directory_mappings" {
+    for_each = var.restricted_home ? [
+      {
+        entry = "/"
+        target = "/${each.value}"
+      }
+    ] : []
+
+    content {
+      entry  = home_directory_mappings.value.entry
+      target = home_directory_mappings.value.target
+    }
+  }
+
+  role = aws_iam_role.user[each.key].arn
+  tags = merge({ User = each.key }, var.tags)
 }
 
 resource "aws_transfer_ssh_key" "this" {
