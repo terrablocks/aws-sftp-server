@@ -51,49 +51,6 @@ resource "aws_iam_role_policy" "logging" {
 POLICY
 }
 
-resource "aws_iam_role" "auth" {
-  count = var.identity_provider_type == "API_GATEWAY" ? 1 : 0
-  name  = "${local.name}-api-gateway-auth"
-
-  assume_role_policy = <<EOF
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "transfer.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole"
-    }
-  ]
-}
-EOF
-}
-
-resource "aws_iam_role_policy" "auth" {
-  count = var.identity_provider_type == "API_GATEWAY" ? 1 : 0
-  name  = "${local.name}-api-gateway-auth"
-  role  = join(",", aws_iam_role.auth.*.id)
-
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-POLICY
-}
-
 resource "aws_transfer_server" "public" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   count                  = var.sftp_type == "PUBLIC" ? 1 : 0
