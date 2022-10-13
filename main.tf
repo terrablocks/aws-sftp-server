@@ -102,7 +102,7 @@ locals {
 }
 
 resource "aws_eip" "sftp_vpc" {
-  count = local.create_eip ? 1 : 0
+  count = local.create_eip ? length(lookup(var.endpoint_details, "subnet_ids", [])) : 0
   vpc   = true
   tags  = var.tags
 }
@@ -119,7 +119,8 @@ resource "aws_transfer_server" "vpc" {
     vpc_endpoint_id        = lookup(var.endpoint_details, "vpc_endpoint_id", null)
     subnet_ids             = lookup(var.endpoint_details, "subnet_ids", null)
     security_group_ids     = lookup(var.endpoint_details, "security_group_ids", aws_security_group.sftp_vpc.*.id)
-    address_allocation_ids = local.create_eip ? aws_eip.sftp_vpc.*.id : lookup(var.endpoint_details, "address_allocation_ids")
+    address_allocation_ids = local.create_eip ? aws_eip.sftp_vpc.*.id : lookup(var.endpoint_details, "address_allocation_ids", null)
+
   }
 
   identity_provider_type = var.identity_provider_type
