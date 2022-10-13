@@ -231,13 +231,21 @@ resource "aws_iam_role_policy" "user" {
     {
       "Sid": "AllowListingOfUserFolder",
       "Action": [
-        "s3:ListBucket",
-        "s3:GetBucketLocation"
+        "s3:ListBucket"
       ],
       "Effect": "Allow",
       "Resource": [
-        "arn:aws:s3:::$${Transfer:HomeBucket}"
-      ]
+        "arn:aws:s3:::${split("/", trim(each.value, "/"))[0]}"
+      ],
+      "Condition": {
+          "StringLike": {
+              "s3:prefix": [
+                  "${trimsuffix(replace(each.value, "/^[^/]+\\//", ""), "/")}/*",
+                  "${trimsuffix(replace(each.value, "/^[^/]+\\//", ""), "/")}"
+              ]
+          }
+      }
+
     },
     {
       "Sid": "HomeDirObjectAccess",
