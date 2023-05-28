@@ -72,6 +72,7 @@ EOF
 }
 
 resource "aws_iam_role_policy" "auth" {
+  # checkov:skip=CKV_AWS_355: "*" in resource is required for this policy
   count = var.identity_provider_type == "API_GATEWAY" ? 1 : 0
   name  = "${local.name}-api-gateway-auth"
   role  = join(",", aws_iam_role.auth.*.id)
@@ -232,7 +233,7 @@ resource "aws_iam_role_policy" "user" {
       ],
       "Effect": "Allow",
       "Resource": [
-        "arn:aws:s3:::$${Transfer:HomeBucket}"
+        "arn:aws:s3:::${trimsuffix(each.value, "/")}"
       ]
     },
     {
