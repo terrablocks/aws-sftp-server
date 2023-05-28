@@ -232,7 +232,7 @@ resource "aws_iam_role_policy" "user" {
       ],
       "Effect": "Allow",
       "Resource": [
-        "arn:aws:s3:::$${Transfer:HomeBucket}"
+        "arn:aws:s3:::${trimsuffix(each.value, "/")}"
       ]
     },
     {
