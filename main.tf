@@ -97,19 +97,31 @@ POLICY
 
 resource "aws_transfer_server" "public" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
-  count                  = var.sftp_type == "PUBLIC" ? 1 : 0
-  endpoint_type          = var.sftp_type
-  protocols              = var.protocols
-  certificate            = var.certificate_arn
-  identity_provider_type = var.identity_provider_type
-  url                    = var.api_gw_url
-  invocation_role        = var.invocation_role
-  directory_id           = var.directory_id
-  function               = var.function_arn
-  logging_role           = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
-  force_destroy          = var.force_destroy
-  security_policy_name   = var.security_policy_name
-  host_key               = var.host_key
+  count                            = var.sftp_type == "PUBLIC" ? 1 : 0
+  endpoint_type                    = var.sftp_type
+  protocols                        = var.protocols
+  certificate                      = var.certificate_arn
+  identity_provider_type           = var.identity_provider_type
+  url                              = var.api_gw_url
+  invocation_role                  = var.invocation_role
+  directory_id                     = var.directory_id
+  function                         = var.function_arn
+  logging_role                     = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
+  force_destroy                    = var.force_destroy
+  security_policy_name             = var.security_policy_name
+  host_key                         = var.host_key
+  pre_authentication_login_banner  = var.pre_authentication_login_banner
+  post_authentication_login_banner = var.post_authentication_login_banner
+
+  dynamic "protocol_details" {
+    for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]
+    content {
+      as2_transports              = var.as2_transports
+      passive_ip                  = var.passive_ip
+      set_stat_option             = var.set_stat_option
+      tls_session_resumption_mode = var.tls_session_resumption_mode
+    }
+  }
 
   tags = merge({
     Name = local.name
@@ -168,10 +180,22 @@ resource "aws_transfer_server" "vpc" {
   directory_id           = var.directory_id
   function               = var.function_arn
 
-  logging_role         = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
-  force_destroy        = var.force_destroy
-  security_policy_name = var.security_policy_name
-  host_key             = var.host_key
+  logging_role                     = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
+  force_destroy                    = var.force_destroy
+  security_policy_name             = var.security_policy_name
+  host_key                         = var.host_key
+  pre_authentication_login_banner  = var.pre_authentication_login_banner
+  post_authentication_login_banner = var.post_authentication_login_banner
+
+  dynamic "protocol_details" {
+    for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]
+    content {
+      as2_transports              = var.as2_transports
+      passive_ip                  = var.passive_ip
+      set_stat_option             = var.set_stat_option
+      tls_session_resumption_mode = var.tls_session_resumption_mode
+    }
+  }
 
   tags = merge({
     Name = local.name

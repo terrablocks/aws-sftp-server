@@ -97,6 +97,42 @@ variable "host_key" {
   description = "RSA private key that will be used to identify your server when clients connect to it over SFTP"
 }
 
+variable "pre_authentication_login_banner" {
+  type        = string
+  default     = null
+  description = "Message to display to user when trying to connect to the server **before** authentication"
+}
+
+variable "post_authentication_login_banner" {
+  type        = string
+  default     = null
+  description = "Message to display to user when trying to connect to the server **after** authentication"
+}
+
+variable "as2_transports" {
+  type        = set(string)
+  default     = null
+  description = "Transport method to use for AS2 messages. **Valid values:** `HTTP`"
+}
+
+variable "passive_ip" {
+  type        = string
+  default     = null
+  description = "Use passive IP (PASV) capability to attach the IP address of the firewall or the load balancer to your FTPS/FTP server"
+}
+
+variable "set_stat_option" {
+  type        = string
+  default     = null
+  description = "Whether the server should ignore SETSTAT command. **Valid values:** `DEFAULT`, `ENABLE_NO_OP`"
+}
+
+variable "tls_session_resumption_mode" {
+  type        = string
+  default     = null
+  description = "TLS session resumption mode provides a mechanism to resume recently negotiated encrypted TLS sessions between the client and the FTPS server. Using one of the TLS session resumption modes, you can customize how you want to your FTPS server to process TLS session resumption requests"
+}
+
 variable "hosted_zone" {
   type        = string
   default     = null
