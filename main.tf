@@ -99,6 +99,7 @@ resource "aws_transfer_server" "public" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   count                            = var.sftp_type == "PUBLIC" ? 1 : 0
   endpoint_type                    = var.sftp_type
+  domain                           = var.storage_type
   protocols                        = var.protocols
   certificate                      = var.certificate_arn
   identity_provider_type           = var.identity_provider_type
@@ -163,6 +164,7 @@ resource "aws_transfer_server" "vpc" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   count         = var.sftp_type != "PUBLIC" ? 1 : 0
   endpoint_type = var.sftp_type
+  domain        = var.storage_type
   protocols     = var.protocols
   certificate   = var.certificate_arn
 
@@ -281,8 +283,8 @@ resource "aws_transfer_user" "this" {
   for_each       = var.sftp_users
   server_id      = local.server_id
   user_name      = each.key
-  home_directory = "/${each.value}"
   role           = aws_iam_role.user[each.key].arn
+  home_directory = "/${each.value}"
   tags           = merge({ User = each.key }, var.tags)
 }
 

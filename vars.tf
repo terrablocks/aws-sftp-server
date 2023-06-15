@@ -10,6 +10,12 @@ variable "sftp_type" {
   description = "Type of SFTP server. **Valid values:** `PUBLIC`, `VPC` or `VPC_ENDPOINT`"
 }
 
+variable "storage_type" {
+  type        = string
+  default     = "S3"
+  description = "Where to store the files. **Valid values:** `S3` or `EFS`"
+}
+
 variable "protocols" {
   type        = list(string)
   default     = ["SFTP"]
