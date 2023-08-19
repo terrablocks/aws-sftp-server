@@ -93,7 +93,7 @@ variable "force_destroy" {
 
 variable "security_policy_name" {
   type        = string
-  default     = "TransferSecurityPolicy-2020-06"
+  default     = "TransferSecurityPolicy-2023-05"
   description = "Specifies the name of the [security policy](https://docs.aws.amazon.com/transfer/latest/userguide/security-policies.html) to associate with the server"
 }
 
