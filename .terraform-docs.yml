@@ -1,0 +1,63 @@
+formatter: "markdown table" # this is required
+
+header-from: .tf-header.md
+footer-from: .tf-footer.md
+
+recursive:
+  enabled: false
+  path: modules
+
+sections:
+  hide:
+  - resources
+  - data-sources
+  - modules
+  - providers
+
+content: |-
+  {{ .Header }}
+
+  # Usage Instructions
+  ## Example
+  ```hcl
+  {{ include "examples/default.tf" }}
+  ```
+
+  {{ .Requirements }}
+
+  {{ .Inputs }}
+
+  {{ .Outputs }}
+
+  {{ .Footer }}
+
+output:
+  file: README.md
+  mode: inject
+  template: |-
+    <!-- BEGIN_TF_DOCS -->
+    {{ .Content }}
+    <!-- END_TF_DOCS -->
+
+output-values:
+  enabled: false
+  from: ""
+
+sort:
+  enabled: true
+  by: name
+
+settings:
+  anchor: false
+  color: true
+  default: true
+  description: false
+  escape: false
+  hide-empty: false
+  html: false
+  indent: 2
+  lockfile: false # because .terraform.lock.hcl is not checked in the repository
+  read-comments: true
+  required: true
+  sensitive: false
+  type: true
