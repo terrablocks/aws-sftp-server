@@ -27,7 +27,7 @@ module "sftp" {
 | Name | Version |
 |------|---------|
 | terraform | >= 1.3.0 |
-| aws | >= 5.13.1 |
+| aws | >= 5.10.0 |
 | random | >= 3.1.0 |
 
 ## Inputs
