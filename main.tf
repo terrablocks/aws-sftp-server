@@ -156,9 +156,10 @@ resource "aws_security_group" "sftp_vpc" {
 }
 
 resource "aws_eip" "sftp_vpc" {
-  count = var.sftp_type == "VPC" && lookup(var.endpoint_details, "address_allocation_ids", null) == null ? length(lookup(var.endpoint_details, "subnet_ids")) : 0
-  vpc   = true
-  tags  = var.tags
+  # checkov:skip=CKV2_AWS_19: EIP will be attached to SFTP server
+  count  = var.sftp_type == "VPC" && lookup(var.endpoint_details, "address_allocation_ids", null) == null ? length(lookup(var.endpoint_details, "subnet_ids")) : 0
+  domain = "vpc"
+  tags   = var.tags
 }
 
 resource "aws_transfer_server" "vpc" {
