@@ -27,28 +27,10 @@ resource "aws_iam_role" "logging" {
 EOF
 }
 
-resource "aws_iam_role_policy" "logging" {
-  count = var.logging_role == null ? 1 : 0
-  name  = "${local.name}-transfer-logging"
-  role  = join(",", aws_iam_role.logging[*].id)
-
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogStream",
-        "logs:DescribeLogStreams",
-        "logs:CreateLogGroup",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-POLICY
+resource "aws_iam_role_policy_attachment" "logging" {
+  count      = var.logging_role == null ? 1 : 0
+  role       = join(",", aws_iam_role.logging[*].name)
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSTransferLoggingAccess"
 }
 
 resource "aws_iam_role" "auth" {
@@ -114,6 +96,7 @@ resource "aws_transfer_server" "public" {
   host_key                         = var.host_key
   pre_authentication_login_banner  = var.pre_authentication_login_banner
   post_authentication_login_banner = var.post_authentication_login_banner
+  structured_log_destinations      = var.cloudwatch_log_group_arns
 
   dynamic "protocol_details" {
     for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]
@@ -190,6 +173,7 @@ resource "aws_transfer_server" "vpc" {
   host_key                         = var.host_key
   pre_authentication_login_banner  = var.pre_authentication_login_banner
   post_authentication_login_banner = var.post_authentication_login_banner
+  structured_log_destinations      = var.cloudwatch_log_group_arns
 
   dynamic "protocol_details" {
     for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]

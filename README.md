@@ -27,7 +27,7 @@ module "sftp" {
 | Name | Version |
 |------|---------|
 | terraform | >= 1.3.0 |
-| aws | >= 5.0.0 |
+| aws | >= 5.13.1 |
 | random | >= 3.1.0 |
 
 ## Inputs
@@ -37,6 +37,7 @@ module "sftp" {
 | api_gw_url | URL of the service endpoint to authenticate users when `identity_provider_type` is of type `API_GATEWAY` | `string` | `null` | no |
 | as2_transports | Transport method to use for AS2 messages. **Valid values:** `HTTP` | `set(string)` | `null` | no |
 | certificate_arn | ARN of ACM certificate. Required only in case of FTPS protocol | `string` | `null` | no |
+| cloudwatch_log_group_arns | Set of ARN of the CloudWatch log group to which SFTP server will write JSON logs. Required if `enable_json_logging` is set to `true` | `set(string)` | `[]` | no |
 | directory_id | ID of the directory service to authenticate users when `identity_provider_type` is of type `AWS_DIRECTORY_SERVICE` | `string` | `null` | no |
 | endpoint_details | A block required to setup SFTP server if type is set to `VPC` or `VPC_ENDPOINT` ```{ vpc_id = (Optional) ID of VPC in which SFTP server endpoint will be hosted. Required if endpoint type is set to VPC vpc_endpoint_id = (Optional) The ID of VPC endpoint to use for hosting internal SFTP server. Required if endpoint type is set to VPC_ENDPOINT subnet_ids = (Optional) List of subnets ids within the VPC for hosting SFTP server endpoint. Required if endpoint type is set to VPC security_group_ids = (Optional) List of security groups to attach to the SFTP endpoint. Supported only if endpoint is to type VPC. If left blank for VPC, a security group with port 22 open to the world will be created and attached address_allocation_ids = (Optional) List of address allocation IDs to attach an Elastic IP address to your SFTP server endpoint. Supported only if endpoint type is set to VPC. If left blank for VPC, an EIP will be automatically created per subnet and attached }``` | ```object({ vpc_id = optional(string) vpc_endpoint_id = optional(string) subnet_ids = optional(list(string)) security_group_ids = optional(list(string)) address_allocation_ids = optional(list(string)) })``` | `{}` | no |
 | force_destroy | Whether to delete all the users associated with server so that server can be deleted successfully. **Note:** Supported only if `identity_provider_type` is set to `SERVICE_MANAGED` | `bool` | `true` | no |

@@ -85,6 +85,18 @@ variable "logging_role" {
   description = "ARN of an IAM role to allow to write SFTP users activity to Amazon CloudWatch logs"
 }
 
+# variable "enable_json_logging" {
+#   type        = bool
+#   default     = false
+#   description = "Whether to enable JSON structured logging for SFTP server. For more information refer to [AWS documentation](https://docs.aws.amazon.com/transfer/latest/userguide/structured-logging.html)"
+# }
+
+variable "cloudwatch_log_group_arns" {
+  type        = set(string)
+  default     = []
+  description = "Set of ARN of the CloudWatch log group to which SFTP server will write JSON logs. Required if `enable_json_logging` is set to `true`"
+}
+
 variable "force_destroy" {
   type        = bool
   default     = true
