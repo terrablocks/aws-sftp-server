@@ -27,28 +27,10 @@ resource "aws_iam_role" "logging" {
 EOF
 }
 
-resource "aws_iam_role_policy" "logging" {
-  count = var.logging_role == null ? 1 : 0
-  name  = "${local.name}-transfer-logging"
-  role  = join(",", aws_iam_role.logging.*.id)
-
-  policy = <<POLICY
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogStream",
-        "logs:DescribeLogStreams",
-        "logs:CreateLogGroup",
-        "logs:PutLogEvents"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-POLICY
+resource "aws_iam_role_policy_attachment" "logging" {
+  count      = var.logging_role == null ? 1 : 0
+  role       = join(",", aws_iam_role.logging[*].name)
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSTransferLoggingAccess"
 }
 
 resource "aws_iam_role" "auth" {
@@ -73,9 +55,10 @@ EOF
 
 resource "aws_iam_role_policy" "auth" {
   # checkov:skip=CKV_AWS_355: "*" in resource is required for this policy
+  # checkov:skip=CKV_AWS_290: Write access required for this policy
   count = var.identity_provider_type == "API_GATEWAY" ? 1 : 0
   name  = "${local.name}-api-gateway-auth"
-  role  = join(",", aws_iam_role.auth.*.id)
+  role  = join(",", aws_iam_role.auth[*].id)
 
   policy = <<POLICY
 {
@@ -97,19 +80,33 @@ POLICY
 
 resource "aws_transfer_server" "public" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
-  count                  = var.sftp_type == "PUBLIC" ? 1 : 0
-  endpoint_type          = var.sftp_type
-  protocols              = var.protocols
-  certificate            = var.certificate_arn
-  identity_provider_type = var.identity_provider_type
-  url                    = var.api_gw_url
-  invocation_role        = var.invocation_role
-  directory_id           = var.directory_id
-  function               = var.function_arn
-  logging_role           = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
-  force_destroy          = var.force_destroy
-  security_policy_name   = var.security_policy_name
-  host_key               = var.host_key
+  count                            = var.sftp_type == "PUBLIC" ? 1 : 0
+  endpoint_type                    = var.sftp_type
+  domain                           = var.storage_type
+  protocols                        = var.protocols
+  certificate                      = var.certificate_arn
+  identity_provider_type           = var.identity_provider_type
+  url                              = var.api_gw_url
+  invocation_role                  = var.invocation_role
+  directory_id                     = var.directory_id
+  function                         = var.function_arn
+  logging_role                     = var.logging_role == null ? join(",", aws_iam_role.logging[*].arn) : var.logging_role
+  force_destroy                    = var.force_destroy
+  security_policy_name             = var.security_policy_name
+  host_key                         = var.host_key
+  pre_authentication_login_banner  = var.pre_authentication_login_banner
+  post_authentication_login_banner = var.post_authentication_login_banner
+  structured_log_destinations      = var.cloudwatch_log_group_arns
+
+  dynamic "protocol_details" {
+    for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]
+    content {
+      as2_transports              = var.as2_transports
+      passive_ip                  = var.passive_ip
+      set_stat_option             = var.set_stat_option
+      tls_session_resumption_mode = var.tls_session_resumption_mode
+    }
+  }
 
   tags = merge({
     Name = local.name
@@ -142,15 +139,17 @@ resource "aws_security_group" "sftp_vpc" {
 }
 
 resource "aws_eip" "sftp_vpc" {
-  count = var.sftp_type == "VPC" && lookup(var.endpoint_details, "address_allocation_ids", null) == null ? length(lookup(var.endpoint_details, "subnet_ids")) : 0
-  vpc   = true
-  tags  = var.tags
+  # checkov:skip=CKV2_AWS_19: EIP will be attached to SFTP server
+  count  = var.sftp_type == "VPC" && lookup(var.endpoint_details, "address_allocation_ids", null) == null ? length(lookup(var.endpoint_details, "subnet_ids")) : 0
+  domain = "vpc"
+  tags   = var.tags
 }
 
 resource "aws_transfer_server" "vpc" {
   # checkov:skip=CKV_AWS_164: Exposing server publicly depends on user
   count         = var.sftp_type != "PUBLIC" ? 1 : 0
   endpoint_type = var.sftp_type
+  domain        = var.storage_type
   protocols     = var.protocols
   certificate   = var.certificate_arn
 
@@ -158,8 +157,8 @@ resource "aws_transfer_server" "vpc" {
     vpc_id                 = lookup(var.endpoint_details, "vpc_id", null)
     vpc_endpoint_id        = lookup(var.endpoint_details, "vpc_endpoint_id", null)
     subnet_ids             = lookup(var.endpoint_details, "subnet_ids", null)
-    security_group_ids     = lookup(var.endpoint_details, "security_group_ids", aws_security_group.sftp_vpc.*.id)
-    address_allocation_ids = lookup(var.endpoint_details, "address_allocation_ids", aws_eip.sftp_vpc.*.allocation_id)
+    security_group_ids     = lookup(var.endpoint_details, "security_group_ids", aws_security_group.sftp_vpc[*].id)
+    address_allocation_ids = lookup(var.endpoint_details, "address_allocation_ids", aws_eip.sftp_vpc[*].allocation_id)
   }
 
   identity_provider_type = var.identity_provider_type
@@ -168,10 +167,23 @@ resource "aws_transfer_server" "vpc" {
   directory_id           = var.directory_id
   function               = var.function_arn
 
-  logging_role         = var.logging_role == null ? join(",", aws_iam_role.logging.*.arn) : var.logging_role
-  force_destroy        = var.force_destroy
-  security_policy_name = var.security_policy_name
-  host_key             = var.host_key
+  logging_role                     = var.logging_role == null ? join(",", aws_iam_role.logging[*].arn) : var.logging_role
+  force_destroy                    = var.force_destroy
+  security_policy_name             = var.security_policy_name
+  host_key                         = var.host_key
+  pre_authentication_login_banner  = var.pre_authentication_login_banner
+  post_authentication_login_banner = var.post_authentication_login_banner
+  structured_log_destinations      = var.cloudwatch_log_group_arns
+
+  dynamic "protocol_details" {
+    for_each = var.as2_transports == null && var.passive_ip == null && var.set_stat_option == null && var.tls_session_resumption_mode == null ? [] : [0]
+    content {
+      as2_transports              = var.as2_transports
+      passive_ip                  = var.passive_ip
+      set_stat_option             = var.set_stat_option
+      tls_session_resumption_mode = var.tls_session_resumption_mode
+    }
+  }
 
   tags = merge({
     Name = local.name
@@ -179,8 +191,8 @@ resource "aws_transfer_server" "vpc" {
 }
 
 locals {
-  server_id = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public.*.id) : join(",", aws_transfer_server.vpc.*.id)
-  server_ep = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public.*.endpoint) : join(",", aws_transfer_server.vpc.*.endpoint)
+  server_id = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public[*].id) : join(",", aws_transfer_server.vpc[*].id)
+  server_ep = var.sftp_type == "PUBLIC" ? join(",", aws_transfer_server.public[*].endpoint) : join(",", aws_transfer_server.vpc[*].endpoint)
 }
 
 data "aws_route53_zone" "primary" {
@@ -190,7 +202,7 @@ data "aws_route53_zone" "primary" {
 
 resource "aws_route53_record" "sftp" {
   count   = var.hosted_zone == null ? 0 : 1
-  zone_id = join(",", data.aws_route53_zone.primary.*.zone_id)
+  zone_id = join(",", data.aws_route53_zone.primary[*].zone_id)
   name    = "${var.sftp_sub_domain}.${var.hosted_zone}"
   type    = "CNAME"
   ttl     = "60"
@@ -257,8 +269,8 @@ resource "aws_transfer_user" "this" {
   for_each       = var.sftp_users
   server_id      = local.server_id
   user_name      = each.key
-  home_directory = "/${each.value}"
   role           = aws_iam_role.user[each.key].arn
+  home_directory = "/${each.value}"
   tags           = merge({ User = each.key }, var.tags)
 }
 

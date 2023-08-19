@@ -15,7 +15,12 @@ jobs:
           python-version: 3.9
       - name: Scan with Checkov
         id: checkov
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
+          quiet: true
+          download_external_modules: false
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          skip_path: examples

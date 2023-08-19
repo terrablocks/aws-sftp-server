@@ -10,6 +10,12 @@ variable "sftp_type" {
   description = "Type of SFTP server. **Valid values:** `PUBLIC`, `VPC` or `VPC_ENDPOINT`"
 }
 
+variable "storage_type" {
+  type        = string
+  default     = "S3"
+  description = "Where to store the files. **Valid values:** `S3` or `EFS`"
+}
+
 variable "protocols" {
   type        = list(string)
   default     = ["SFTP"]
@@ -79,6 +85,12 @@ variable "logging_role" {
   description = "ARN of an IAM role to allow to write SFTP users activity to Amazon CloudWatch logs"
 }
 
+variable "cloudwatch_log_group_arns" {
+  type        = set(string)
+  default     = []
+  description = "Set of ARN of the CloudWatch log group to which SFTP server will write JSON logs. Required if `enable_json_logging` is set to `true`"
+}
+
 variable "force_destroy" {
   type        = bool
   default     = true
@@ -87,7 +99,7 @@ variable "force_destroy" {
 
 variable "security_policy_name" {
   type        = string
-  default     = "TransferSecurityPolicy-2020-06"
+  default     = "TransferSecurityPolicy-2023-05"
   description = "Specifies the name of the [security policy](https://docs.aws.amazon.com/transfer/latest/userguide/security-policies.html) to associate with the server"
 }
 
@@ -95,6 +107,42 @@ variable "host_key" {
   type        = string
   default     = null
   description = "RSA private key that will be used to identify your server when clients connect to it over SFTP"
+}
+
+variable "pre_authentication_login_banner" {
+  type        = string
+  default     = null
+  description = "Message to display to user when trying to connect to the server **before** authentication"
+}
+
+variable "post_authentication_login_banner" {
+  type        = string
+  default     = null
+  description = "Message to display to user when trying to connect to the server **after** authentication"
+}
+
+variable "as2_transports" {
+  type        = set(string)
+  default     = null
+  description = "Transport method to use for AS2 messages. **Valid values:** `HTTP`"
+}
+
+variable "passive_ip" {
+  type        = string
+  default     = null
+  description = "Use passive IP (PASV) capability to attach the IP address of the firewall or the load balancer to your FTPS/FTP server"
+}
+
+variable "set_stat_option" {
+  type        = string
+  default     = null
+  description = "Whether the server should ignore SETSTAT command. **Valid values:** `DEFAULT`, `ENABLE_NO_OP`"
+}
+
+variable "tls_session_resumption_mode" {
+  type        = string
+  default     = null
+  description = "TLS session resumption mode provides a mechanism to resume recently negotiated encrypted TLS sessions between the client and the FTPS server. Using one of the TLS session resumption modes, you can customize how you want to your FTPS server to process TLS session resumption requests"
 }
 
 variable "hosted_zone" {
